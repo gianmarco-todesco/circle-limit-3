@@ -224,3 +224,43 @@ class CellMesh extends Mesh {
     }  
 };
 
+
+class CellBgMesh extends Mesh {
+    constructor(gl,r) {
+        const m = 8;
+        super(gl, gl.TRIANGLE_FAN);
+        const attributes = { 
+            position: { data: [], numComponents: 2 },
+        };
+        attributes.position.data.push(0,0);
+        let n = 10;
+        
+        let coords = [];
+        for(let j=0;j<m;j++) {
+            let phi = -2*Math.PI*j/m;
+            coords.push(r*Math.cos(phi), r*Math.sin(phi));
+        }
+        function addPoint(j, u, v) {
+            attributes.position.data.push(coords[j*2], coords[j*2+1]);
+            attributes.texcoord.data.push(u,v);
+        }
+        for(let j=0;j<m;j++) { 
+            addPoint(j%m, 0,0); 
+            addPoint((j+1)%m, 0,0); 
+        }
+        addPoint(0,1,0);
+        addPoint(2,1,0);
+        addPoint(4,1,0);
+        addPoint(6,1,0);
+        
+        addPoint(2,1,1);
+        addPoint(4,1,1);
+        addPoint(6,1,1);
+        addPoint(0,1,1);
+        
+
+
+        this.createBufferInfo(attributes);
+    }  
+};
+

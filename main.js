@@ -30,14 +30,14 @@ function initialize() {
     cellMesh = new CellMesh(gl, R);
     let t = performance.now();
     tessellation = new Tessellation();
-    for(let it=0; it<5; it++) {
+    for(let it=0; it<0; it++) { // 5
         tessellation.addShell();
     }
     console.log(performance.now() - t);
     console.log(tessellation.cells.length)
     //tessellation.addShell();
     //tessellation.addShell();
-    
+    handlePointerEvents(canvas);
 }
 
 function drawDot(x,y) {
@@ -53,7 +53,7 @@ function drawDot(x,y) {
 let ptIndex = 0;
 
 function render(time) {
-
+    let t0 = performance.now();
     twgl.resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -135,6 +135,27 @@ function render(time) {
         multiOctagon.draw(hMaterial);
     }
     */
+
+    simpleMaterial.uniforms.color = [0,1,1,1];
+    simpleMaterial.enable();
+    let p1 = tessellation.basePoints[0];
+    drawDot(p1[0],p1[1])
+
+    let p2 = tessellation.basePoints[2];
+    drawDot(p2[0],p2[1])
+
+    let p3 = pTransform(
+        tessellation.baseMatrices[0],
+        tessellation.basePoints[6]);
+    drawDot(p3[0],p3[1]);
+
+    let arc = getCircleArc(p1,p2,p3);
+    m = 30;
+    for(let i=0; i<m; i++) {
+        p = arc(i/m);
+        drawDot(p[0],p[1])
+    }
+
     
     /*
     let bm = tessellation.boundary.length;
@@ -173,6 +194,8 @@ function render(time) {
     */
 
 
+    let dt = performance.now() - t0;
+    window.dt = dt;
     requestAnimationFrame(render);
 }
 
@@ -186,3 +209,34 @@ document.addEventListener('keydown', e => {
         ptIndex = (ptIndex+tessellation.boundary.length-1)%tessellation.boundary.length;
     }
 });
+
+let cx=0,cy=0;
+
+function onDrag(dx, dy) {
+    cx += dx*0.001;
+    cy += dy*0.001;
+    hMaterial.uniforms.hViewMatrix = hTranslation1(-cx,-cy);
+    hMaterial.setUniforms();
+    console.log(dt);
+}
+
+function handlePointerEvents(canvas) {
+    canvas.onpointerdown = e => {
+        let oldx = e.clientX;
+        let oldy = e.clientY;
+        canvas.setPointerCapture(e.pointerId);
+        canvas.onpointermove = e => {
+            // console.log(e);
+            let dx = e.clientX - oldx;
+            let dy = e.clientY - oldy;
+            oldx = e.clientX;
+            oldy = e.clientY;
+            onDrag(dx,dy);            
+        }
+        canvas.onpointerup = e => {
+            canvas.onpointermove = null;
+            canvas.onpointerup = null;
+            // console.log("release")
+        };
+    };
+}
