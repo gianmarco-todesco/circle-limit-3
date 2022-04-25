@@ -179,8 +179,19 @@ class HyperbolicTexturedMaterial extends Material {
             uniform vec4 color1;
             uniform vec4 color2;
             
-            void main() {                
-                gl_FragColor = texture2D(texture, v_texcoord * 0.5 + vec2(0.5,0.5)); 
+            void main() {         
+                vec2 p = v_texcoord;
+                vec4 pix2 = texture2D(texture, p * 0.5 + vec2(0.5,0.5));                
+                p = vec2(-v_texcoord.y, v_texcoord.x);
+                vec4 pix1 = texture2D(texture, p * 0.5 + vec2(0.5,0.5));
+
+                float g = pix1.r * (1.0-pix1.r) * 4.0;
+                pix1 = pix1 * (color1);
+
+                g = pix2.r * (1.0-pix2.r) * 4.0;
+                pix2 = pix2 * (color2);
+
+                gl_FragColor = pix1 * pix1.a + pix2 * pix2.a; 
             } 
             `,
             uniforms: {
@@ -196,6 +207,9 @@ class HyperbolicTexturedMaterial extends Material {
         });
     }
 };
+
+
+
 class Circle extends Mesh {
     constructor(gl,r, m, thickness) {
         super(gl, gl.TRIANGLE_STRIP);
@@ -291,7 +305,7 @@ class CellBgMesh extends Mesh {
         const attributes = { 
             position: { data: [], numComponents: 2 },
         };
-        let n = 4;
+        let n = 10;
 
         for(let j=0;j<=m;j++) {
             let phi1 = -2*Math.PI*(j)/m;

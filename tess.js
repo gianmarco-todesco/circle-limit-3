@@ -12,11 +12,11 @@ class Tessellation {
                     m4.multiply(m4.rotationZ(-2*Math.PI/3), tmat));    
             this.baseMatrices.push(mat);
         }
-        let perm = this.colorPermutations = [
-            [1,2,0,3],
-            [0,2,3,1],
-            [3,0,2,1],
-            [3,1,0,2]            
+        let perm = this.colorPermutations = [           
+            [1,2,0,3], // ok
+            [0,2,3,1], // ok
+            [3,0,2,1], // ok
+            [3,1,0,2], // ok                
         ];
         this.cells = [{ mat: m4.identity(), colors: [0,1,2,3]}];
         this.baseMatrices.forEach((mat,i) => {

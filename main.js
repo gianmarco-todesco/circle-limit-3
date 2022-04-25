@@ -7,6 +7,7 @@ let simpleMaterial, hMaterial, hMaterial2;
 let circle, dot;
 let multiOctagon;
 let cellMesh;
+let bicolorCellMesh;
 
 document.addEventListener('DOMContentLoaded', () => {
     canvas = document.querySelector("#c");
@@ -24,7 +25,7 @@ function initialize() {
     requestAnimationFrame(render);   
 
     const textures = twgl.createTextures(gl, {
-        texture1: { src: "images/texture2.png" }});
+        texture1: { src: "images/texture1.png" }});
 
 
     simpleMaterial = new SimpleMaterial(gl);
@@ -35,10 +36,11 @@ function initialize() {
     circle = new Circle(gl, 1.02, 100, 0.02);
     dot = new Dot(gl, 0.01, 20);
     multiOctagon = new MultiPolygon(gl, R,8);
-    cellMesh = new CellBgMesh(gl, R);
+    cellMesh = new CellBgMesh(gl, R + 0.09);
+
     let t = performance.now();
     tessellation = new Tessellation();
-    for(let it=0; it<0; it++) { // 5
+    for(let it=0; it<3; it++) { // 5
         tessellation.addShell();
     }
     console.log(performance.now() - t);
@@ -69,6 +71,8 @@ function render(time) {
     // gl.enable(gl.CULL_FACE);
     gl.clearColor(0.6, 0.6, 0.6, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;    
     m4.ortho(-aspect, aspect, 1, -1, -1, 1, viewMatrix);
@@ -84,16 +88,17 @@ function render(time) {
     hMaterial2.uniforms.color = [1,1,1,1];
     
     let colors = [
-        [0,1,0,1],
-        [0.756,0.534,0.145,1],
-        [1,0.0,0.0,1],
-        [0,0.5,0.0,1]        
+        [0.53,0.52,0.28,1],
+        [0.73,0.53,0.16,1],
+        [0.50,0.21,0.13,1],
+        [0.17,0.32,0.35,1]        
     ];
+    colors = colors.map(v => v.map(x => x*1.4));
     tessellation.cells.forEach(cell => {
         hMaterial2.uniforms.hmatrix = cell.mat;
         //hMaterial.uniforms.color = [0.5,0.5,0.5,1.0]
-        //hMaterial.uniforms.color1 = colors[cell.colors[0]];
-        //hMaterial.uniforms.color2 = colors[cell.colors[1]];
+        hMaterial2.uniforms.color1 = colors[cell.colors[0]];
+        hMaterial2.uniforms.color2 = colors[cell.colors[1]];
         
         hMaterial2.setUniforms();
         cellMesh.draw(hMaterial2);        
