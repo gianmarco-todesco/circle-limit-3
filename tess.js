@@ -4,7 +4,7 @@ class Tessellation {
         this.baseMatrices = [];
         this.basePoints = [];
         for(let i=0; i<8; i++) {
-            let phi = -2*Math.PI*i/8;
+            let phi = -2*Math.PI*(i)/8;
             let p = [Math.cos(phi)*R, Math.sin(phi)*R];
             this.basePoints.push(p);
             let tmat = hTranslation1(p[0], p[1]);
