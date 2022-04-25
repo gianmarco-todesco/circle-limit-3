@@ -93,7 +93,7 @@ function render(time) {
         [0.50,0.21,0.13,1],
         [0.17,0.32,0.35,1]        
     ];
-    colors = colors.map(v => v.map(x => x*1.4));
+    colors = colors.map(v => v.map(x => x*3.0));
     tessellation.cells.forEach(cell => {
         hMaterial2.uniforms.hmatrix = cell.mat;
         //hMaterial.uniforms.color = [0.5,0.5,0.5,1.0]
@@ -113,10 +113,25 @@ function render(time) {
 
 document.addEventListener('keydown', e => {
     console.log(e.code);
+    /*
     if(e.code == "ArrowRight") {
         ptIndex = (ptIndex+1)%tessellation.boundary.length;
     } else if(e.code == "ArrowLeft") {
         ptIndex = (ptIndex+tessellation.boundary.length-1)%tessellation.boundary.length;
+    }
+    */
+    if(e.code == "Digit1") {
+        let phi = -2*Math.PI*(0)/8;
+        let p = [Math.cos(phi)*R, Math.sin(phi)*R];
+        let tmat = hTranslation1(p[0], p[1]);
+        let mat = m4.multiply(m4.inverse(tmat), 
+                m4.multiply(m4.rotationZ(-0.1*2*Math.PI/3), tmat));    
+        
+
+
+        hMaterial2.uniforms.hViewMatrix = 
+            m4.multiply(hMaterial2.uniforms.hViewMatrix,
+                mat);
     }
 });
 

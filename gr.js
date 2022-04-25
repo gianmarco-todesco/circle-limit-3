@@ -185,11 +185,11 @@ class HyperbolicTexturedMaterial extends Material {
                 p = vec2(-v_texcoord.y, v_texcoord.x);
                 vec4 pix1 = texture2D(texture, p * 0.5 + vec2(0.5,0.5));
 
-                float g = pix1.r * (1.0-pix1.r) * 4.0;
-                pix1 = pix1 * (color1);
+                
+                pix1 = vec4(pix1.g * (color1.rgb * pix1.a * (1.0 - pix1.r) + vec3(1.0,1.0,1.0)  * pix1.r), pix1.a);
+                pix2 = vec4(pix2.g * (color2.rgb * pix2.a * (1.0 - pix2.r) + vec3(1.0,1.0,1.0) * pix2.r), pix2.a);
 
-                g = pix2.r * (1.0-pix2.r) * 4.0;
-                pix2 = pix2 * (color2);
+                // pix2 = pix2 * (color2);
 
                 gl_FragColor = pix1 * pix1.a + pix2 * pix2.a; 
             } 
