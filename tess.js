@@ -77,10 +77,11 @@ class GenericTessellation {
         this.boundary = [];
         
         
-        for(let i = 0; i<3; i++) {
+        for(let i = 0; i<m; i++) {
             let b = oldBoundary[i];
             let j0 = b.type == 1 ? 2 : 1;
             let j1 = this.n2 - 1;
+            // if(b.type == 2) j1++;
             for(let j = j0; j < j1; j++) {
                 let matB = m4.multiply(b.cell.mat, this.baseMatrices[b.j][j]);
                 let newCell = { mat:matB };
@@ -88,8 +89,10 @@ class GenericTessellation {
 
                 // let t0 = oldBoundary[(i+m-1)%m].type == 1 ? 3 : 2;
                 let t0 = 1;
-                if(j==j0 && b.type == 2) t0++;
+
+                // if(j==0 && b.type==2) t0++;
                 let t1 = this.n1 - 1;
+                if(j==j1-1) t1--;
                 for(let t = t0; t < t1; t++) {
                     let k = (t+b.j)%this.n1;
                     let p = pTransform(matB, this.basePoints[k]);

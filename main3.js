@@ -18,9 +18,9 @@ function initialize() {
     requestAnimationFrame(render);   
 
     circle = new Circle(gl, 1.02, 100, 0.02);
-    dot = new Dot(gl, 0.01, 20);
+    dot = new Dot(gl, 0.005, 20);
 
-    tessellation = new GenericTessellation(5,5);
+    tessellation = new GenericTessellation(6,4);
     tessellation.addFirstShell();
     tessellation.addShell();
     polygonOutline = new HyperbolicPolygonOutline(gl, tessellation.n1, tessellation.R);
@@ -43,7 +43,7 @@ function initialize() {
 function uff(n,m) {
     tessellation = new GenericTessellation(n,m);
     tessellation.addFirstShell();
-    tessellation.addShell();
+    // tessellation.addShell();
     
     polygonOutline = new HyperbolicPolygonOutline(gl, tessellation.n1, tessellation.R);
     ptIndex = 0;
@@ -82,11 +82,11 @@ function render(time) {
     if(0<=ptIndex && ptIndex < tessellation.boundary.length) {
         let pt = tessellation.boundary[ptIndex];
         p = pt.p;
-        dot.material.uniforms.color = pt.type == 1 ? [1,0,0,1] : [0,0,0,1];
+        dot.material.uniforms.color = pt.type == 1 ? [1,0,0,1] : [0,1,1,1];
         dot.material.uniforms.modelMatrix = m4.translation([p[0],p[1],0.0]);
         dot.draw();
     
-        dot.material.uniforms.color = [0,1,1,1];
+        dot.material.uniforms.color = [1,0,1,1];
         p = pTransform(pt.cell.mat, [0,0]); 
         dot.material.uniforms.modelMatrix =  m4.translation([p[0],p[1],0.0]);
         dot.draw();
