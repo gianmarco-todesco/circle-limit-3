@@ -362,6 +362,87 @@ class CellMesh extends Mesh {
 };
 
 
+class T83ColorLinesMesh extends Mesh {
+    constructor(gl,r) {
+        super(gl, gl.TRIANGLES, new HyperbolicMaterial(gl));
+        const m = 8;
+        const attributes = { 
+            position: { data: [], numComponents: 2 },
+            texcoord: { data: [], numComponents: 2 },
+            indices: { data: [], numComponents: 3 }
+        };
+        let coords = [];
+        for(let j=0;j<m;j++) {
+            let phi = -2*Math.PI*j/m;
+            coords.push(r*Math.cos(phi), r*Math.sin(phi));
+        }
+        
+
+        const n = 20;
+
+        /*
+        for(let i=0; i<m; i++) {
+            let i1 = (i+1)%m;
+            let pts = [];
+            let kp0 = p2k([coords[i*2],coords[i*2+1]]);
+            let kp1 = p2k([coords[i1*2],coords[i1*2+1]]);
+            for(let j=0; j<=n; j++) {
+                let t = j/n;
+                pts.push(k2p([kp0[0]*(1-t)+kp1[0]*t, kp0[1]*(1-t)+kp1[1]*t]));            
+            }
+            for(let j=0; j<n; j++) {
+                attributes.position.data.push(pts[j][0], pts[j][1], pts[j+1][0], pts[j+1][1]);
+                attributes.texcoord.data.push(0,0,0,0);
+            }    
+        }
+        */
+
+        const g = Math.sin(2*Math.PI/3) / Math.sin(Math.PI/12);
+        let k = 0;
+        for(let i=0; i<4; i++) {
+            let v = i%2;
+            let i1 = i*2, i2 = (i1 + 1)%8, i3 = (i2 + 1)%8;
+            let p0 = [coords[2*i1], coords[2*i1+1]];
+            let p2 = [coords[2*i3], coords[2*i3+1]];
+            let c = [coords[2*i2]*g, coords[2*i2+1]*g];
+            let rr = Math.sqrt(Math.pow(c[0]-p0[0], 2) + Math.pow(c[1]-p0[1], 2) );
+            
+            for(let j=0; j<=n; j++) {
+                let t = j/n;
+    
+                let x = p0[0] * (1-t) + p2[0] * t - c[0];
+                let y = p0[1] * (1-t) + p2[1] * t - c[1];
+                let factor = 1.0 / Math.sqrt(x*x+y*y);
+                let ux = x * factor;
+                let uy = y * factor;
+                let x0 = c[0] + ux * rr;
+                let y0 = c[1] + uy * rr;
+                let w = 0.005 * 1.0/(1.0 - x0*x0 - y0*y0);
+                if(t<0.1) w *= t/0.1;
+                else if(t>0.9) w *= (1-t)/0.1;
+                
+                attributes.position.data.push(
+                    x0 - ux*w, y0 - uy*w,
+                    x0 + ux*w, y0 + uy*w);
+                attributes.texcoord.data.push(1,v,1,v);
+            }
+            for(let j=0; j<n; j++) {
+                attributes.indices.data.push(
+                    k+2*j,k+2*j+1,k+2*j+3, 
+                    k+2*j, k+2*j+3, k+2*j+2 );
+            }
+            k += (n+1)*2;
+            
+    
+        }
+        //attributes.position.data.push(coords[0], coords[1], coords[4], coords[5]);
+        //attributes.texcoord.data.push(0,0,0,0);
+
+        this.createBufferInfo(attributes);
+    }  
+};
+
+
 class Cell2Mesh extends Mesh {
     constructor(gl,r) {
         super(gl, gl.TRIANGLE_FAN, new HyperbolicMaterial(gl));

@@ -25,7 +25,7 @@ function initialize() {
 
     cellMesh = new CellMesh(gl, R);
     cell2Mesh = new Cell2Mesh(gl, R);
-
+    t83ColorLineMesh = new T83ColorLinesMesh(gl, R);
 
     let t = performance.now();
     tessellation = new Tessellation();
@@ -65,6 +65,8 @@ function render(time) {
         [0.17,0.32,0.35,1]        
     ];
     colors = colors.map(v => v.map(x => x*3.0));
+
+
     tessellation.cells.forEach(cell => {
         let uniforms = cell2Mesh.material.uniforms;
 
@@ -79,6 +81,8 @@ function render(time) {
         cell2Mesh.draw();        
     })
     
+    /*
+
     tessellation.cells.forEach(cell => {
         let uniforms = cellMesh.material.uniforms;
 
@@ -88,6 +92,17 @@ function render(time) {
         
         cellMesh.draw();        
     })
+    */
+    tessellation.cells.forEach(cell => {
+        let uniforms = t83ColorLineMesh.material.uniforms;
+
+        uniforms.hmatrix = cell.mat;
+        uniforms.color1 = colors[palette[cell.colors[0]]];
+        uniforms.color2 = colors[palette[cell.colors[1]]];
+        
+        t83ColorLineMesh.draw();        
+    })
+    
     
     let dt = performance.now() - t0;
     window.dt = dt;
