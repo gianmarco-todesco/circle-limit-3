@@ -1,6 +1,8 @@
 
 let currentMaterial = null;
 const viewMatrix = twgl.m4.identity();
+const hViewMatrix = twgl.m4.identity();
+
 let simpleMaterial;
 
 class Material {
@@ -81,6 +83,51 @@ class SimpleMaterial extends Material {
     setModelMatrix(matrix) {
         this.modelMatrix = matrix;
     }
+};
+
+
+class HyperbolicSimpleMaterial extends Material {
+    constructor(gl) {
+        super(gl, {
+            vs : `
+            precision mediump float;
+            attribute vec2 position;
+            uniform mat4 hViewMatrix;
+            uniform mat4 hMatrix;
+            uniform mat4 viewMatrix;
+            
+
+            // poincaré to hyperboloid
+            vec4 p2h(vec2 p) { 
+                float t = 2.0/(1.0-(p.x*p.x+p.y*p.y)); 
+                return vec4(t*p.x,t*p.y,t-1.0,1.0); 
+            }
+            // hyperboloid to poincaré
+            vec2 h2p(vec4 p) {
+                float d = 1.0/(p.w + p.z);
+                return vec2(p.x*d, p.y*d);
+            }
+
+            void main(void) { 
+                vec4 p = p2h(position);
+                vec2 q = h2p(hViewMatrix * hMatrix * p);
+                gl_Position = viewMatrix * vec4(q, 0.0, 1.0); 
+            }
+            `,
+            fs:`
+            precision mediump float;            
+            uniform vec4 color;            
+            void main() { gl_FragColor = color; }
+            `,
+            uniforms: {
+                color: [0.0,0.0,0.0,1.0],
+                viewMatrix: viewMatrix,
+                hMatrix: twgl.m4.identity(),
+                hViewMatrix: twgl.m4.identity()
+            }
+        });
+    }
+
 };
 
 
@@ -362,6 +409,37 @@ class CellMesh extends Mesh {
 };
 
 
+
+class HyperbolicPolygonOutline extends Mesh {
+    constructor(gl, m, r) {
+        super(gl, gl.LINES, new HyperbolicSimpleMaterial(gl));
+        const attributes = { 
+            position: { data: [], numComponents: 2 }
+        };
+        let coords = [];
+        for(let j=0;j<m;j++) {
+            let phi = -2*Math.PI*j/m;
+            coords.push(r*Math.cos(phi), r*Math.sin(phi));
+        }
+        const n = 20;
+        for(let i=0; i<m; i++) {
+            let i1 = (i+1)%m;
+            let pts = [];
+            let kp0 = p2k([coords[i*2],coords[i*2+1]]);
+            let kp1 = p2k([coords[i1*2],coords[i1*2+1]]);
+            for(let j=0; j<=n; j++) {
+                let t = j/n;
+                pts.push(k2p([kp0[0]*(1-t)+kp1[0]*t, kp0[1]*(1-t)+kp1[1]*t]));            
+            }
+            for(let j=0; j<n; j++) {
+                attributes.position.data.push(pts[j][0], pts[j][1], pts[j+1][0], pts[j+1][1]);
+            }    
+        }
+        this.createBufferInfo(attributes);
+    }  
+};
+
+
 class T83ColorLinesMesh extends Mesh {
     constructor(gl,r) {
         super(gl, gl.TRIANGLES, new HyperbolicMaterial(gl));
@@ -420,7 +498,7 @@ class T83ColorLinesMesh extends Mesh {
                 let w = 0.005 * 1.0/(1.0 - x0*x0 - y0*y0);
                 if(t<0.1) w *= t/0.1;
                 else if(t>0.9) w *= (1-t)/0.1;
-                
+
                 attributes.position.data.push(
                     x0 - ux*w, y0 - uy*w,
                     x0 + ux*w, y0 + uy*w);
