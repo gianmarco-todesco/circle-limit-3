@@ -42,7 +42,7 @@ function initialize() {
 
     let t = performance.now();
     tessellation = new Tessellation();
-    for(let it=0; it<0; it++) { // 5
+    for(let it=0; it<5; it++) { // 5
         tessellation.addShell();
     }
     console.log(performance.now() - t);
@@ -153,8 +153,8 @@ let cx=0,cy=0;
 function onDrag(dx, dy) {
     cx += dx*0.001;
     cy += dy*0.001;
-    hMaterial2.uniforms.hViewMatrix = hTranslation1(-cx,-cy);
-    hMaterial2.setUniforms();
+    let tmp = hTranslation1(-cx,-cy);
+    for(let i=0;i<16;i++) hViewMatrix[i]=tmp[i];
     console.log(dt);
 }
 

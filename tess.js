@@ -136,6 +136,7 @@ class Tessellation {
             this.cells.push({mat, colors: perm[i%4]});
         });
         this.boundary = [];
+        
         for(let i=0; i<8; i++) {
             let cell = this.cells[i+1]; 
             for(let j=2; j<7; j++) {
@@ -149,6 +150,7 @@ class Tessellation {
                 })
             }            
         }
+        
     }
 
     addShell() {

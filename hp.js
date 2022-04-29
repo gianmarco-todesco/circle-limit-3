@@ -1,5 +1,5 @@
 
-function hTranslation1(dx, dy) {
+function hTranslation(dx, dy) {
     let d = Math.sqrt(dx*dx+dy*dy);
     let phi = -Math.atan2(dy,dx);
     let cs = Math.cos(phi);
@@ -7,14 +7,14 @@ function hTranslation1(dx, dy) {
     let h = 2 * Math.atanh(d);
     let csh = Math.cosh(h);
     let snh = Math.sinh(h);
-    return m4.multiply(
+    return twgl.m4.multiply(
         [
             cs,-sn, 0.0, 0.0,
             sn, cs, 0.0, 0.0,
             0.0, 0.0, 1.0, 0.0,
             0.0, 0.0, 0.0, 1.0
         ],
-        m4.multiply(
+        twgl.m4.multiply(
             [csh,0,-snh,0, 0,1,0,0, -snh,0,csh,0,0,0,0,1],
             [
                 cs, sn, 0.0, 0.0,
@@ -67,7 +67,7 @@ function k2p(p) {
 // poincaré => hyperboloid => transform => poincaré
 function pTransform(mat, p) {
     let q = [0,0,0,1];
-    m4.transformPoint(mat, p2h(p), q);
+    twgl.m4.transformPoint(mat, p2h(p), q);
     return h2p(q);
 }
 

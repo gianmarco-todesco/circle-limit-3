@@ -1,20 +1,22 @@
 
 let currentMaterial = null;
 const viewMatrix = twgl.m4.identity();
+const modelMatrix = twgl.m4.identity();
 const hViewMatrix = twgl.m4.identity();
 
 let simpleMaterial;
 
+// -----------------------------
+// Material
+// -----------------------------
 class Material {
     constructor(gl, options) {
         this.gl = gl;
         let vs = options.vs;
         let fs = options.fs;
         this.uniforms = options.uniforms;
-        this.programInfo = twgl.createProgramInfo(gl, [vs, fs]);  
-        
+        this.programInfo = twgl.createProgramInfo(gl, [vs, fs]);          
     }
-
 
     setUniforms() {
         twgl.setUniforms(this.programInfo, this.uniforms);  
@@ -28,6 +30,9 @@ class Material {
     }
 };
 
+// -----------------------------
+// Mesh
+// -----------------------------
 class Mesh {
     constructor(gl, verb, material) {
         this.gl = gl;
@@ -46,6 +51,10 @@ class Mesh {
     }
 };
 
+
+// -----------------------------
+// SimpleMaterial
+// -----------------------------
 class SimpleMaterial extends Material {
     constructor(gl) {
         super(gl, {
@@ -58,25 +67,19 @@ class SimpleMaterial extends Material {
             }
             `,
             fs:`
-            precision mediump float;
-            
-            // varying vec2 texcoord;
-            // uniform sampler2D texture;
-            uniform vec4 color;
-            
+            precision mediump float;            
+            uniform vec4 color;        
             void main() {
-            gl_FragColor = color; 
+                gl_FragColor = color; 
             } 
             `,
             uniforms: {
                 color: [0.0,0.0,0.0,1.0],
                 viewMatrix: viewMatrix,
-                modelMatrix: twgl.m4.identity()
+                modelMatrix: modelMatrix
             }
-
         });
     }
-
     setColor(rgba) {
         for(let i=0;i<4;i++) this.uniforms.color[i] = rgba[i];        
     }
@@ -86,7 +89,8 @@ class SimpleMaterial extends Material {
 };
 
 
-class HyperbolicSimpleMaterial extends Material {
+// obsoleto?
+class HyperbolicMaterial extends Material {
     constructor(gl) {
         super(gl, {
             vs : `
@@ -131,7 +135,57 @@ class HyperbolicSimpleMaterial extends Material {
 };
 
 
-class HyperbolicMaterial extends Material {
+class HyperbolicSimpleMaterial extends Material {
+    constructor(gl) {
+        super(gl, {
+            vs : `
+            precision mediump float;
+            attribute vec2 position;
+            uniform mat4 hViewMatrix;
+            uniform mat4 hModelMatrix;
+            uniform mat4 viewMatrix;
+            
+            // poincaré to hyperboloid
+            vec4 p2h(vec2 p) { 
+                float t = 2.0/(1.0-(p.x*p.x+p.y*p.y)); 
+                return vec4(t*p.x,t*p.y,t-1.0,1.0); 
+            }
+            // hyperboloid to poincaré
+            vec2 h2p(vec4 p) {
+                float d = 1.0/(p.w + p.z);
+                return vec2(p.x*d, p.y*d);
+            }
+
+            void main(void) { 
+                vec4 p = p2h(position);
+                vec2 q = h2p(hViewMatrix * hModelMatrix * p);
+                gl_Position = viewMatrix * vec4(q, 0.0, 1.0); 
+            }
+            `,
+            fs:`
+            precision mediump float;            
+            uniform vec4 color;
+            
+            void main() {
+                gl_FragColor = color; 
+            } 
+            `,
+            uniforms: {
+                color: [0.0,0.0,0.0,1.0],
+                viewMatrix: viewMatrix,
+                hModelMatrix: twgl.m4.identity(),
+                hViewMatrix: twgl.m4.identity(),
+            }
+        });
+    }
+    setColor(rgba) {
+        for(let i=0;i<4;i++) this.uniforms.color[i] = rgba[i];        
+    }
+};
+
+
+
+class HyperbolicMaterial2 extends Material {
     constructor(gl) {
         super(gl, {
             vs : `
@@ -239,11 +293,16 @@ class HyperbolicTexturedMaterial extends Material {
             uniform vec4 color1;
             uniform vec4 color2;
             
-            void main() {         
+            void main() {     
+                float factor = 1.24;   
                 vec2 p = v_texcoord;
-                vec4 pix2 = texture2D(texture, p * 0.5 + vec2(0.5,0.5));                
+                vec4 pix2 = texture2D(texture, p * factor + vec2(0.5,0.5));  
+                //vec2 uff = p * factor + vec2(0.5,0.5);  
+                //if(uff.x<0.0 || uff.x>1.0 || uff.y<0.0 || uff.y>1.0) {pix2.a = 0.0;}       
                 p = vec2(-v_texcoord.y, v_texcoord.x);
-                vec4 pix1 = texture2D(texture, p * 0.5 + vec2(0.5,0.5));
+                vec4 pix1 = texture2D(texture, p * factor + vec2(0.5,0.5));
+                //uff = p * factor + vec2(0.5,0.5);  
+                //if(uff.x<0.0 || uff.x>1.0 || uff.y<0.0 || uff.y>1.0) {pix1.a = 0.0;}       
 
                 
                 pix1 = vec4(pix1.g * (color1.rgb * pix1.a * (1.0 - pix1.r) + vec3(1.0,1.0,1.0)  * pix1.r), pix1.a);
@@ -272,10 +331,8 @@ function getSimpleMaterial(gl) {
 }
 
 
-
-
 class Circle extends Mesh {
-    constructor(gl,r, m, thickness) {
+    constructor(gl, r, thickness, m) {
         super(gl, gl.TRIANGLE_STRIP, getSimpleMaterial(gl));
         const attributes = { position: { data: [], numComponents: 2 } };    
         let r0 = r-thickness;
@@ -286,8 +343,62 @@ class Circle extends Mesh {
             attributes.position.data.push(cs*r1,sn*r1,cs*r0,sn*r0);
         }
         this.createBufferInfo(attributes);
+    }      
+};
+
+
+class Disk extends Mesh {
+    constructor(gl,r, m) {
+        super(gl, gl.TRIANGLE_FAN, getSimpleMaterial(gl));
+        const attributes = { position: { data: [], numComponents: 2 } };    
+        attributes.position.data.push(0.0, 0.0);
+        for(let i=0;i<m;i++) {
+            let phi = 2*Math.PI*i/(m-1);
+            let cs = Math.cos(phi), sn = Math.sin(phi);
+            attributes.position.data.push(cs*r,sn*r);
+        }
+        this.createBufferInfo(attributes);
     }  
 };
+
+
+//-----------------------------------------------------
+// Hyperbolic Shapes
+//-----------------------------------------------------
+
+class HLineMesh extends Mesh {
+    constructor(gl,thickness, m) {
+        super(gl, gl.TRIANGLE_STRIP, new HyperbolicSimpleMaterial(gl));
+        const attributes = { position: { data: [], numComponents: 2 } };    
+        let r = 40.0; // .0/thickness;
+        let d = Math.sqrt(r*r-1);
+        attributes.position.data.push(-1,0);
+        for(let i=1;i<m;i++) {
+            let t = i/m;
+            let dx = -1 + 2*t;
+            let factor = r/Math.sqrt(dx*dx + d*d);
+            let x = dx * factor;
+            let y = -d + d * factor;
+            attributes.position.data.push(x,y,x,-y);
+        }
+        attributes.position.data.push(1,0);
+        this.createBufferInfo(attributes);
+    }  
+
+    setByPoints(p0, p1) {
+        const m4 = twgl.m4;
+        let tr = hTranslation(-p0[0], -p0[1]);
+        /*
+        let tr_i = twgl.m4.inverse(tr);
+        let p = pTransform(tr_i, p1);
+        let phi = Math.atan2(p[1], p[0]);
+        twgl.m4.multiply(tr, twgl.m4.rotationZ(phi), this.material.uniforms.hModelMatrix);
+        */
+        m4.copy(tr, this.material.uniforms.hModelMatrix);
+        
+    }
+} 
+
 
 class Dot extends Mesh {
     constructor(gl,r, m) {
@@ -568,7 +679,7 @@ class CellBgMesh extends Mesh {
             position: { data: [], numComponents: 2 },
         };
         const textures = twgl.createTextures(gl, {
-            texture1: { src: "images/texture1.png" }});
+            texture1: { src: "images/texture3.png", wrap: gl.CLAMP_TO_EDGE }});
         this.material.uniforms.texture1 = textures.texture1;
 
         let n = 10;
