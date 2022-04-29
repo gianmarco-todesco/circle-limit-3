@@ -23,7 +23,7 @@ function hTranslation(dx, dy) {
                 0.0, 0.0, 0.0, 1.0
             ]));
 }
-
+hTranslation1 = hTranslation;
 
 /*
 

@@ -362,6 +362,35 @@ class Disk extends Mesh {
 };
 
 
+class Updatable extends Mesh {
+    constructor(gl, m) {
+        super(gl, gl.LINE_STRIP, getSimpleMaterial(gl));
+        this.m = m;
+        
+        const attributes = this.attributes = { position: { data: [], numComponents: 2 } };    
+        for(let i=1;i<m;i++) {
+            let t = i/m;
+            let phi = Math.PI*2*i/m;
+            attributes.position.data.push(0.5*Math.cos(phi), 1*Math.sin(phi));
+        }
+        this.createBufferInfo(attributes);
+    }  
+
+    update(r) {
+        const attributes = this.attributes;
+        const v = attributes.position.data;
+        for(let i=1;i<this.m;i++) {
+            let phi = Math.PI*2*i/this.m;
+            v[i*2] = r*0.5*Math.cos(phi);
+            v[i*2+1] = r*Math.sin(phi);
+        }        
+        twgl.setAttribInfoBufferFromArray(this.gl, this.bufferInfo.attribs.position, this.attributes.position);
+    }
+}
+
+
+
+
 //-----------------------------------------------------
 // Hyperbolic Shapes
 //-----------------------------------------------------
