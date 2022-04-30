@@ -9,8 +9,13 @@ class DiskViewer {
         let canvas = this.canvas = document.getElementById(canvasId);
         if(!canvas) throw "Canvas not found:" + canvasId;
         let gl = this.gl = canvas.getContext("webgl");
-        let renderFn = options.render || function(gl, viewer) {};
-        let initFn = options.init || function(gl, viewer) {};
+        const viewer = this;
+
+        let scenes = this.scenes = options.scenes || [];
+        scenes.forEach(scene => {
+            scene.viewer = viewer;
+            scene.gl = gl;
+        });
         
         let bgColor = options.bgColor || [0.7,0.75,0.8,1];
         gl.clearColor(...bgColor);
@@ -18,18 +23,20 @@ class DiskViewer {
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
         this.createEntities();
-        const viewer = this;
-
-        this.onPointerDown = options.onPointerDown;
-        this.onPointerUp   = options.onPointerUp;
-        this.onPointerMove = options.onPointerMove;
-        this.onPointerDrag = options.onPointerDrag;
         
         this.draggableDots = [];
         this.currentDot = null;
 
-        // call init
-        initFn(gl, viewer);
+        this.currentSceneIndex = null;
+        this.currentScene = null;
+        if(this.scenes.length > 0) {
+            this.currentSceneIndex = 0;
+            this.setCurrentScene(this.scenes[0]);
+        }
+
+        this.handlePointerEvents(canvas);  
+        this.handleKeyboardEvents();  
+
 
         // animate function
         const animate = function(time) {
@@ -41,13 +48,27 @@ class DiskViewer {
             twgl.m4.ortho(-aspect, aspect, 1, -1, -1, 1, viewMatrix);
             viewer.entities.circle.material.setColor([0,0,0,1]);
             viewer.entities.circle.draw();
-            renderFn(gl, viewer);
+            if(viewer.currentScene && viewer.currentScene.render)
+                viewer.currentScene.render();
             requestAnimationFrame(animate);
         }
         requestAnimationFrame(animate);      
-        this.handlePointerEvents(canvas);  
     }
 
+
+
+    setCurrentScene(scene) {
+        if(this.currentScene) {
+            if(this.currentScene.stop) this.currentScene.stop();
+        }
+        this.currentScene = scene;
+        if(this.currentScene) {
+            if(this.currentScene.init && !this.currentScene.initDone) {
+                this.currentScene.init();
+            }
+            if(this.currentScene.start) this.currentScene.start();
+        }
+    }
 
     createDraggableDot(x,y) {
         let dot = new DraggableDot(this, x,y);
@@ -114,7 +135,8 @@ class DiskViewer {
                 let dy = p[1] - this.oldp[1];
                 this.oldp[0] = p[0];
                 this.oldp[1] = p[1];    
-                if(this.onPointerDrag) this.onPointerDrag({x:p[0], y:p[1], dx, dy, e});    
+                if(this.currentScene && this.currentScene.onPointerDrag) 
+                    this.currentScene.onPointerDrag({x:p[0], y:p[1], dx, dy, e});    
             }
         } else {
             // move
@@ -122,12 +144,34 @@ class DiskViewer {
         }
     }
     
+    _onKeyDown(e) {
+        console.log(e);
+        if(e.code == "ArrowLeft") {
+            if(this.currentSceneIndex>0) {
+                this.currentSceneIndex--;
+                this.setCurrentScene(this.scenes[this.currentSceneIndex]);
+            }
+        } else if(e.code == "ArrowRight") {
+            if(this.currentSceneIndex+1<this.scenes.length) {
+                this.currentSceneIndex++;
+                this.setCurrentScene(this.scenes[this.currentSceneIndex]);
+            }
+
+        }
+    }
+
+
     handlePointerEvents(canvas) {   
         const me = this;
         this.buttonDown = false;
         canvas.onpointerdown = e => me._onPointerDown(e);
         canvas.onpointerup   = e => me._onPointerUp(e);
         canvas.onpointermove = e => me._onPointerMove(e);
+    }
+
+    handleKeyboardEvents() {
+        const me = this;
+        document.addEventListener('keydown', e => me._onKeyDown(e));
     }
        
 }

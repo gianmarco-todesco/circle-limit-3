@@ -82,6 +82,14 @@ function pMidPoint(a,b) {
     return h2p(h);
 }
 
+function normalizeHMatrix(hmatrix) {
+    let p = pTransform(hmatrix, [0,0]);
+    let hmatrix1 = m4.multiply(hTranslation(-p[0], -p[1]), hmatrix);
+    let q = pTransform(hmatrix1, [0.5,0]);
+    let phi = Math.atan2(q[1],q[0]);
+    return m4.multiply(hTranslation(p[0], p[1]), m4.rotationZ(phi));
+}
+
 // return a circle passing by three points : [cx,cy,r]
 // see: https://www.geeksforgeeks.org/equation-of-circle-when-three-points-on-the-circle-are-given/
 function getCircle(p1, p2, p3)

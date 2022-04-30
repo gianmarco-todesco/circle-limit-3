@@ -7,6 +7,38 @@ let hLine1, hLine2;
 let hPolygon;
 
 
+
+document.addEventListener('DOMContentLoaded', () => {
+
+
+    let scenes = [
+        new Scene4(),
+        new Scene1(),
+        new Scene2(),
+        new Scene3(),
+        
+        
+    ];
+
+    viewer = new DiskViewer({ scenes } );
+    /*
+    viewer = new DiskViewer({ 
+        onPointerDrag : (e) => {
+            let x = 1024 * (0.5 + e.x * 0.5);
+            let y = 1024 * (0.5 + e.y * 0.5);
+            textureCtx.fillStyle='black';
+            textureCtx.fillRect(x - 5, y - 5, 10, 10);
+            disk.material.updateTexture(disk.material.uniforms.texture, textureCanvas);
+        }
+        
+    });
+    */
+    
+
+});
+
+/*
+
 function drawDot(p) {
     let material = sdot1.material;
     let oldMatrix = material.uniforms.modelMatrix;
@@ -115,20 +147,6 @@ function render2(gl, viewer) {
     disk.material.uniforms.hModelMatrix = m4.identity();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    viewer = new DiskViewer({ init:init2, render:render2,
-        onPointerDrag : (e) => {
-            let x = 1024 * (0.5 + e.x * 0.5);
-            let y = 1024 * (0.5 + e.y * 0.5);
-            textureCtx.fillStyle='black';
-            textureCtx.fillRect(x - 5, y - 5, 10, 10);
-            disk.material.updateTexture(disk.material.uniforms.texture, textureCanvas);
-        }
-        
-    });
-    
-});
-
   
 function uff(color) {
     textureCtx.fillStyle=color;
@@ -136,3 +154,5 @@ function uff(color) {
     disk.material.updateTexture(disk.material.uniforms.texture, textureCanvas);
     
 }
+
+*/
