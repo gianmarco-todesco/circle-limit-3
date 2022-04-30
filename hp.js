@@ -1,7 +1,7 @@
 
 function hTranslation(dx, dy) {
     let d = Math.sqrt(dx*dx+dy*dy);
-    let phi = -Math.atan2(dy,dx);
+    let phi = -Math.atan2(-dy,-dx);
     let cs = Math.cos(phi);
     let sn = Math.sin(phi);
     let h = 2 * Math.atanh(d);
@@ -41,7 +41,7 @@ hTranslation1 = hTranslation;
   }
   */
 
-
+// n.b. in the hyperboloid: x^2+y^2-z^2 = -1
   
 // poincaré to hyperboloid 
 function p2h(p) { 
@@ -71,6 +71,16 @@ function pTransform(mat, p) {
     return h2p(q);
 }
 
+
+// midpoint in poincaré model
+function pMidPoint(a,b) {
+    let ha = p2h(a);
+    let hb = p2h(b);
+    let x = ha[0]+hb[0], y = ha[1]+hb[1], z = ha[2]+hb[2];
+    let factor = 1.0/Math.sqrt(z*z-x*x-y*y)    
+    let h = [x*factor,y*factor,z*factor,1];
+    return h2p(h);
+}
 
 // return a circle passing by three points : [cx,cy,r]
 // see: https://www.geeksforgeeks.org/equation-of-circle-when-three-points-on-the-circle-are-given/
@@ -209,20 +219,6 @@ function getCircleArc(p1, p2, p3)
         let s = r/d;
         return [cx + dx*s, cy + dy*s];        
     }
-}
-
-function invertPoint(p) {
-    const [x,y] = p;
-    let factor = 1.0/(x*x+y*y);
-    return [x*factor, y*factor]
-}
-
-function getDistance(pa,pb) {
-    return Math.sqrt(Math.pow(pb[0]-pa[0],2) + Math.pow(pb[1]-pa[1],2));
-}
-
-function getLength(p) {
-    return Math.sqrt(p[0]*p[0] + p[1]*p[1]);
 }
 
 function getHThickness(x,y) {
