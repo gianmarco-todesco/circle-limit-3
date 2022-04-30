@@ -158,12 +158,12 @@ class Scene5 {
         const {gl, viewer, disk} = this;
         let tess = this.tess = new GenericTessellation(6,4);
         tess.addFirstShell();
-        for(let i=0;i<1;i++) tess.addShell();
+        for(let i=0;i<3;i++) tess.addShell();
 
         let textureCanvas = this._createTexture();
 
 
-        this.hPolygon = new HRegularPolygonMesh(gl, tess.n1, tess.R, 60);
+        this.hPolygon = new HRegularPolygonMesh(gl, tess.n1, tess.R, 120);
         this.hPolygon.material = new HyperbolicTexturedMaterialBis(gl);
         this.hPolygon.material.uniforms.texture = twgl.createTexture(gl, {src:textureCanvas, mag: gl.LINEAR, min: gl.LINEAR });
         this.hMatrix = m4.identity();
@@ -219,6 +219,174 @@ class Scene5 {
 
     onPointerDrag(e) {
         this.hMatrix = this.tess.adjustMatrix(m4.multiply(hTranslation(e.dx, e.dy), this.hMatrix));
-        //this.uffi();
+        // this.hMatrix = m4.multiply(hTranslation(e.dx, e.dy), this.hMatrix);
+    }
+}
+
+
+class Scene6 {
+    init() {
+        const {gl, viewer, disk} = this;
+
+        let tess = this.tess = new Tessellation();
+        tess.addFirstShell();
+        for(let i=0;i<4;i++) tess.addShell();
+
+        let textureCanvas = this._createTexture();
+
+
+        this.hPolygon = new HRegularPolygonMesh(gl, 8, tess.R, 60);
+        this.hPolygon.material = new HyperbolicPalettedTexturedMaterial(gl);
+        this.hPolygon.material.uniforms.texture = twgl.createTexture(gl, {src:textureCanvas, mag: gl.LINEAR, min: gl.LINEAR });
+        this.hMatrix = m4.identity();
+
+
+        let palette = this.palette = [
+            [0.53,0.52,0.28,1],
+            [0.73,0.53,0.16,1],
+            [0.50,0.21,0.13,1],
+            [0.17,0.32,0.35,1]        
+        ].map(v => v.map(x => x*3.0));
+    
+    }
+
+    render() {
+        const {gl, viewer, disk} = this;
+        const uniforms = this.hPolygon.material.uniforms;
+        let hViewMatrix = this.hMatrix;
+        let scramble = [0,1,2,3];
+        this.tess.cells.forEach(cell => {
+
+            uniforms.color1 = this.palette[scramble[cell.colors[0]]];
+            uniforms.color2 = this.palette[scramble[cell.colors[1]]];
+
+            m4.multiply(hViewMatrix, cell.mat, uniforms.hMatrix);
+            m4.inverse(uniforms.hMatrix, uniforms.hInvMatrix);            
+            this.hPolygon.draw();
+        })
+        m4.identity(uniforms.hMatrix);
+        m4.identity(uniforms.hInvMatrix);
+    }
+
+    _createTexture() {
+        const n = 8;
+        const R = this.tess.R;
+        const sz = 1024;
+        let textureCanvas = new OffscreenCanvas(sz,sz);
+        let ctx = textureCanvas.getContext('2d');
+        ctx.fillStyle='transparent';
+        ctx.fillRect(0,0,sz,sz);
+        const cx = sz/2, cy = sz/2, r = sz/2;    
+        function cv(p) { return [cx + r * p[0], cy + r * p[1]]; }    
+        let vv = [];
+        for(let i=0;i<n; i++) {
+            let phi = 2*Math.PI*i/n;
+            vv.push([R*Math.cos(phi), R*Math.sin(phi)]);
+        }
+        ctx.beginPath();
+        const m = 20;
+        for(let i=0;i<n; i++) {        
+            let hSegment = new HSegment(vv[i], vv[(i+1)%n]);
+            for(let j=0; j<m; j++) {
+                let [x,y] = cv(hSegment.getPoint(j/m));
+                if(i==0 && j==0) ctx.moveTo(x,y);
+                else ctx.lineTo(x,y);
+            }
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#0000FF';
+        ctx.fill();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = '#000088';
+        ctx.stroke();
+
+
+        for(let i=0; i<4; i++) {
+            let hSegment = new HSegment(vv[i*2], vv[(i*2+2)%n]);
+            ctx.beginPath();
+            let p = cv(vv[i*2]);
+            ctx.moveTo(p[0],p[1]);
+            for(let j = 1; j<=m; j++) {
+                p = cv(hSegment.getPoint(j/m, 0.02));
+                ctx.lineTo(p[0],p[1]);
+            }
+            for(let j = 1; j<m; j++) {
+                p = cv(hSegment.getPoint(1-j/m, -0.02));
+                ctx.lineTo(p[0],p[1]);
+            }
+            ctx.closePath();
+            ctx.fillStyle = i%2 == 0 ? '#FF0000' : '#00FF00';
+            ctx.fill();
+
+        }
+
+        return textureCanvas;
+    }
+
+    onPointerDrag(e) {
+
+
+        // this.tess.adjustMatrix(
+        this.hMatrix = m4.multiply(hTranslation(e.dx, e.dy), this.hMatrix);
+        this.hMatrix = normalizeHMatrix(this.hMatrix);
+        // this.hMatrix = m4.multiply(hTranslation(e.dx, e.dy), this.hMatrix);
+    }
+}
+
+
+
+
+class Scene7 {
+    init() {
+        const {gl, viewer, disk} = this;
+
+        let tess = this.tess = new Tessellation();
+        tess.addFirstShell();
+        //for(let i=0;i<4;i++) tess.addShell();
+
+        // let textureCanvas = this._createTexture();
+
+
+        this.hPolygon = new HRegularPolygonMesh(gl, 8, tess.R * 1.25, 60);
+        this.hPolygon.material = new HyperbolicPalettedTexturedMaterial(gl);
+        this.hPolygon.material.uniforms.texture = twgl.createTexture(gl, {src:'./images/texture2.png', mag: gl.LINEAR, min: gl.LINEAR });
+        this.hMatrix = m4.identity();
+
+
+        let palette = this.palette = [
+            [0.53,0.52,0.28,1],
+            [0.73,0.53,0.16,1],
+            [0.50,0.21,0.13,1],
+            [0.17,0.32,0.35,1]        
+        ]; // .map(v => v.map(x => x*3.0));
+    
+    }
+
+    render() {
+        const {gl, viewer, disk} = this;
+        const uniforms = this.hPolygon.material.uniforms;
+        let hViewMatrix = this.hMatrix;
+        let scramble = [0,1,2,3];
+        this.tess.cells.forEach(cell => {
+
+            uniforms.color1 = this.palette[scramble[cell.colors[0]]];
+            uniforms.color2 = this.palette[scramble[cell.colors[1]]];
+
+            m4.multiply(hViewMatrix, cell.mat, uniforms.hMatrix);
+            m4.inverse(uniforms.hMatrix, uniforms.hInvMatrix);            
+            this.hPolygon.draw();
+        })
+        m4.identity(uniforms.hMatrix);
+        m4.identity(uniforms.hInvMatrix);
+    }
+
+
+    onPointerDrag(e) {
+
+
+        // this.tess.adjustMatrix(
+        this.hMatrix = m4.multiply(hTranslation(e.dx, e.dy), this.hMatrix);
+        this.hMatrix = normalizeHMatrix(this.hMatrix);
+        // this.hMatrix = m4.multiply(hTranslation(e.dx, e.dy), this.hMatrix);
     }
 }

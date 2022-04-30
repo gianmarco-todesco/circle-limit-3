@@ -320,3 +320,81 @@ class HyperbolicInvertedTexturedMaterial extends Material {
     }
 };
 
+
+class HyperbolicPalettedTexturedMaterial extends Material {
+    constructor(gl) {
+        super(gl, {
+            vs : `
+            precision mediump float;
+            attribute vec2 position;
+            uniform mat4 hMatrix;
+            uniform mat4 viewMatrix;
+            varying vec2 v_pos;
+            
+            // poincaré to hyperboloid
+            vec4 p2h(vec2 p) { 
+                float t = 2.0/(1.0-(p.x*p.x+p.y*p.y)); 
+                return vec4(t*p.x,t*p.y,t-1.0,1.0); 
+            }
+            // hyperboloid to poincaré
+            vec2 h2p(vec4 p) {
+                float d = 1.0/(p.w + p.z);
+                return vec2(p.x*d, p.y*d);
+            }
+
+            void main(void) { 
+                vec4 p = p2h(position);
+                vec2 q = h2p(hMatrix * p);
+                v_pos = q;
+                gl_Position = viewMatrix * vec4(q, 0.0, 1.0); 
+            }
+            `,
+            fs:`
+            precision mediump float;            
+            uniform vec4 color, color1, color2;
+            varying vec2 v_pos;
+            uniform mat4 hInvMatrix;
+            uniform sampler2D texture;
+            uniform float textureScale;
+
+            // poincaré to hyperboloid
+            vec4 p2h(vec2 p) { 
+                float t = 2.0/(1.0-(p.x*p.x+p.y*p.y)); 
+                return vec4(t*p.x,t*p.y,t-1.0,1.0); 
+            }
+            // hyperboloid to poincaré
+            vec2 h2p(vec4 p) {
+                float d = 1.0/(p.w + p.z);
+                return vec2(p.x*d, p.y*d);
+            }
+
+            void main() {
+                vec2 q = h2p(hInvMatrix * p2h(v_pos));
+                vec4 c = texture2D(texture, vec2(0.5, 0.5) + q * textureScale); 
+                float gray = (c.r+c.g+c.b)/3.0;
+                float alpha = c.a;
+                if(c.r > gray * 1.1) gl_FragColor = vec4(color1.rgb*gray,alpha);
+                else if(c.g > gray * 1.1) gl_FragColor = vec4(color2.rgb*gray,alpha);
+                else gl_FragColor = vec4(color.rgb*gray, alpha);
+            } 
+            `,
+            uniforms: {
+                color: [1.0,1.0,1.0,1.0],
+                color1: [1.0,0.0,0.0,1.0],
+                color2: [0.0,1.0,0.0,1.0],
+                
+                viewMatrix: viewMatrix,
+                //hModelMatrix: twgl.m4.identity(),
+                //hViewMatrix: twgl.m4.identity(),
+                hMatrix: twgl.m4.identity(),
+                hInvMatrix: twgl.m4.identity(),
+                texture: null,
+                textureScale: 0.5
+
+            }
+        });
+    }
+    setColor(rgba) {
+        for(let i=0;i<4;i++) this.uniforms.color[i] = rgba[i];        
+    }
+};
