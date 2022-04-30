@@ -77,11 +77,62 @@ function render(gl, viewer) {
     dot4.draw();
 }
 
+
+let disk;
+let textureCanvas, textureCtx;
+
+function init2(gl, viewer) {
+
+
+    textureCanvas = new OffscreenCanvas(1024,1024);
+    textureCtx = textureCanvas.getContext('2d');
+    textureCtx.fillStyle='transparent';
+    textureCtx.fillRect(0,0,1024,1024);
+
+    disk = new Disk(gl, 0.9999, 100);
+    disk.material = new HyperbolicInvertedTexturedMaterial(gl);
+    disk.material.uniforms.texture = twgl.createTexture(gl, {src: textureCanvas});
+    
+}
+
+
+function render2(gl, viewer) {
+
+    let t = performance.now()*0.001;
+    disk.draw();
+    let matrix = hTranslation(-0.5,0.0);
+    disk.material.uniforms.hModelMatrix = 
+        m4.multiply(matrix, m4.multiply(m4.scaling([-1,1,1]), m4.inverse(matrix)));
+    disk.draw();
+    disk.material.uniforms.hModelMatrix = m4.identity();
+
+
+    for(let i=1; i<10; i++) {
+        disk.material.uniforms.hModelMatrix = m4.multiply(hTranslation(-0.3,0.0), disk.material.uniforms.hModelMatrix);
+        disk.draw();
+
+    }
+    disk.material.uniforms.hModelMatrix = m4.identity();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    viewer = new DiskViewer({ init, render 
+    viewer = new DiskViewer({ init:init2, render:render2,
+        onPointerDrag : (e) => {
+            let x = 1024 * (0.5 + e.x * 0.5);
+            let y = 1024 * (0.5 + e.y * 0.5);
+            textureCtx.fillStyle='black';
+            textureCtx.fillRect(x - 5, y - 5, 10, 10);
+            disk.material.updateTexture(disk.material.uniforms.texture, textureCanvas);
+        }
         
     });
     
 });
 
   
+function uff(color) {
+    textureCtx.fillStyle=color;
+    textureCtx.fillRect(0,0,512,512);
+    disk.material.updateTexture(disk.material.uniforms.texture, textureCanvas);
+    
+}
