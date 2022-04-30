@@ -107,6 +107,24 @@ class GenericTessellation {
     }
 
 
+    adjustMatrix(hMatrix) {
+        //let startTime = performance.now();
+        let bestMatrix = null;
+        let closestDistance;
+        for(let i=0; i<this.n1; i++) {
+            for(let j=0;j<this.n2-1; j++) {
+                let matrix = m4.multiply(hMatrix, this.baseMatrices[i][j]);
+                let p = pTransform(matrix, [0,0]);
+                let d = getLength(p);
+                if(bestMatrix == null || d < closestDistance) {
+                    closestDistance = d;
+                    bestMatrix = matrix;
+                } 
+            }
+        }
+        //let dt = performance.now() - startTime;
+        return normalizeHMatrix(bestMatrix);
+    }
 
 }
 

@@ -139,6 +139,45 @@ class HRegularPolygonOutlineMesh extends Mesh {
     }
 }
 
+
+class HRegularPolygonMesh extends Mesh {
+    constructor(gl, vCount, radius, m) {
+        super(gl, gl.TRIANGLE_FAN, getSimpleHyperbolicMaterial(gl));
+        this.vCount = vCount;
+        this.radius = radius;
+        this.m = m;
+        const attributes = this.attributes = { position: { data: new Array(2+(m+1)*2*vCount), numComponents: 2 } };    
+        attributes.position.data[0] = 0.0;
+        attributes.position.data[1] = 0.0;
+        
+        this._computePts();
+        this.createBufferInfo(attributes);
+    }  
+
+    _computePts() {
+        const m = this.m;
+        const buffer = this.attributes.position.data;
+        let pts = [];
+        for(let side=0; side<this.vCount; side++) {
+            let phi = 2*Math.PI*side/this.vCount;
+            pts.push([this.radius*Math.cos(phi),this.radius*Math.sin(phi)]);
+        }
+        for(let side=0; side<this.vCount; side++) {
+            let hSegment = new HSegment(pts[side], pts[(side+1)%this.vCount]);
+            for(let i=0; i<m; i++) {
+                let p = hSegment.getPoint(i/m);
+                let k = side*m+i;
+                buffer[2*k] = p[0];
+                buffer[2*k+1] = p[1];                
+            }
+        }
+        let t = buffer.length;
+        buffer[t-2] = buffer[2];
+        buffer[t-1] = buffer[3];
+        
+    }
+}
+
 class HRegularPolygon {
     constructor(gl, vCount, radius) {
         this.gl = gl;

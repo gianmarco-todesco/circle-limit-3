@@ -96,6 +96,7 @@ class Scene3 {
     }
 
     onPointerDrag(e) {
+        console.log(e);
         let x = 1024 * (0.5 + e.x * 0.5);
         let y = 1024 * (0.5 + e.y * 0.5);
         this.textureCtx.fillStyle='black';
@@ -128,8 +129,7 @@ class Scene4 {
     }
 
     onPointerDrag(e) {
-        this.hMatrix = m4.multiply(hTranslation(e.dx, e.dy), this.hMatrix);
-        this.uffi();
+        this.hMatrix = this.tess.adjustMatrix(m4.multiply(hTranslation(e.dx, e.dy), this.hMatrix));
     }
 
     uffi() {
@@ -152,3 +152,73 @@ class Scene4 {
     }
 }
 
+
+class Scene5 {
+    init() {
+        const {gl, viewer, disk} = this;
+        let tess = this.tess = new GenericTessellation(6,4);
+        tess.addFirstShell();
+        for(let i=0;i<1;i++) tess.addShell();
+
+        let textureCanvas = this._createTexture();
+
+
+        this.hPolygon = new HRegularPolygonMesh(gl, tess.n1, tess.R, 60);
+        this.hPolygon.material = new HyperbolicTexturedMaterialBis(gl);
+        this.hPolygon.material.uniforms.texture = twgl.createTexture(gl, {src:textureCanvas, mag: gl.LINEAR, min: gl.LINEAR });
+        this.hMatrix = m4.identity();
+        
+    }
+
+
+    render() {
+        const uniforms = this.hPolygon.material.uniforms;
+        let hViewMatrix = this.hMatrix;
+        this.tess.cells.forEach(cell => {
+            m4.multiply(hViewMatrix, cell.mat, uniforms.hMatrix);
+            m4.inverse(uniforms.hMatrix, uniforms.hInvMatrix);            
+            this.hPolygon.draw();
+        })
+        m4.identity(uniforms.hMatrix);
+        m4.identity(uniforms.hInvMatrix);
+        
+    }
+
+    _createTexture() {
+        const n = this.tess.n1;
+        const sz = 1024;
+        let textureCanvas = new OffscreenCanvas(sz,sz);
+        let ctx = textureCanvas.getContext('2d');
+        ctx.fillStyle='transparent';
+        ctx.fillRect(0,0,sz,sz);
+        const cx = sz/2, cy = sz/2, r = sz/2;
+        let pts = [];
+        for(let i=0;i<2*n; i++) {
+            let phi = 2*Math.PI*i/(2*n);
+            pts.push(cx+Math.cos(phi)*r, cy+Math.sin(phi)*r);
+        }
+        for(let i=0;i<n; i++) {
+            let i1 = (i+1)%n;
+            ctx.beginPath();
+            ctx.moveTo(cx,cy);
+            ctx.lineTo(pts[i*4], pts[i*4+1]);
+            ctx.lineTo(pts[i*4+2], pts[i*4+3]);
+            ctx.closePath(cx,cy);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(cx,cy);
+            ctx.lineTo(pts[i*4+2], pts[i*4+3]);
+            ctx.lineTo(pts[i1*4+0], pts[i1*4+1]);
+            ctx.closePath(cx,cy);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+        }
+        return textureCanvas;
+    }
+
+    onPointerDrag(e) {
+        this.hMatrix = this.tess.adjustMatrix(m4.multiply(hTranslation(e.dx, e.dy), this.hMatrix));
+        //this.uffi();
+    }
+}

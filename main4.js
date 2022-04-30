@@ -12,10 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     let scenes = [
-        new Scene4(),
+        new Scene5(),
+        new Scene3(),
         new Scene1(),
         new Scene2(),
-        new Scene3(),
+        new Scene4(),
         
         
     ];
