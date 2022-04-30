@@ -71,7 +71,73 @@ function pTransform(mat, p) {
     return h2p(q);
 }
 
-// return a arc point generator f: f(0) == x1,y1, f(1) == x2,y2
+
+// return a circle passing by three points : [cx,cy,r]
+// see: https://www.geeksforgeeks.org/equation-of-circle-when-three-points-on-the-circle-are-given/
+function getCircle(p1, p2, p3)
+{
+    let [x1,y1] = p1;
+    let [x2,y2] = p2;
+    let [x3,y3] = p3;
+    
+    let x12 = x1 - x2;
+    let x13 = x1 - x3;
+ 
+    let y12 = y1 - y2;
+    let y13 = y1 - y3;
+ 
+    let y31 = y3 - y1;
+    let y21 = y2 - y1;
+ 
+    let x31 = x3 - x1;
+    let x21 = x2 - x1;
+ 
+    //x1^2 - x3^2
+    let sx13 = Math.pow(x1, 2) - Math.pow(x3, 2);
+ 
+    // y1^2 - y3^2
+    let sy13 = Math.pow(y1, 2) - Math.pow(y3, 2);
+ 
+    let sx21 = Math.pow(x2, 2) - Math.pow(x1, 2);
+    let sy21 = Math.pow(y2, 2) - Math.pow(y1, 2);
+ 
+    let fden = 2 * (y31 * x12 - y21 * x13);
+    let gden = 2 * (x31 * y12 - x21 * y13);
+    
+    const eps = 1.0e-8;
+    if(Math.abs(fden)<eps || Math.abs(gden) < eps)
+    {
+        // punti allineati
+        return null;
+    }
+    
+    let f = ( sx13 * x12
+            + sy13 * x12
+            + sx21 * x13
+            + sy21 * x13)
+            / fden;
+    let g = ( sx13 * y12
+            + sy13 * y12
+            + sx21 * y13
+            + sy21 * y13)
+            / gden;
+ 
+    let c = -(Math.pow(x1, 2)) - Math.pow(y1, 2) - 2 * g * x1 - 2 * f * y1;
+ 
+    // eqn of circle be
+    // x^2 + y^2 + 2*g*x + 2*f*y + c = 0
+    // where centre is (h = -g, k = -f) and radius r
+    // as r^2 = h^2 + k^2 - c
+    let cx = -g;
+    let cy = -f;
+    // r is the radius
+    let r = Math.sqrt(cx * cx + cy * cy - c);
+    return [cx,cy,r]
+}
+
+
+// return a arc point generator f: f(0,0.0) == x1,y1, f(1,0.0) == x2,y2
+// second parameter move across the arc (used to draw thick)
 // see: https://www.geeksforgeeks.org/equation-of-circle-when-three-points-on-the-circle-are-given/
 function getCircleArc(p1, p2, p3)
 {
@@ -142,5 +208,170 @@ function getCircleArc(p1, p2, p3)
         let d = Math.sqrt(dx*dx+dy*dy);
         let s = r/d;
         return [cx + dx*s, cy + dy*s];        
+    }
+}
+
+function invertPoint(p) {
+    const [x,y] = p;
+    let factor = 1.0/(x*x+y*y);
+    return [x*factor, y*factor]
+}
+
+function getDistance(pa,pb) {
+    return Math.sqrt(Math.pow(pb[0]-pa[0],2) + Math.pow(pb[1]-pa[1],2));
+}
+
+function getLength(p) {
+    return Math.sqrt(p[0]*p[0] + p[1]*p[1]);
+}
+
+function getHThickness(x,y) {
+    return Math.max(0.1, Math.pow(1.0 - x*x - y*y, 2.0))
+}
+
+class HLine {
+    constructor(cx,cy,w) {
+        this.setParameters(cx,cy,w);
+    }
+
+    setParameters(cx,cy,w) {
+        this.cx = cx;
+        this.cy = cy;
+        this.w = w;
+        if(this.w == 0.0) {
+            this.phi = Math.atan2(cy,cx) + Math.PI/2;
+            this.csPhi = Math.cos(this.phi);
+            this.snPhi = Math.sin(this.phi);
+        } else {
+            cx /= w;
+            cy /= w;  
+            this.cx = cx;
+            this.cy = cy;          
+            let c2 = cx*cx + cy*cy;
+            this.r = Math.sqrt(c2 - 1.0);
+            let c = Math.sqrt(c2);
+            this.e0 = [-cx/c, -cy/c];
+            this.e1 = [-this.e0[1], this.e0[0]];
+            this.theta = Math.acos(this.r/c);            
+        }
+    }
+
+    setByPoints(p0, p1) {
+        const [x0,y0] = p0;
+        const [x1,y1] = p1;
+        const eps = 1.0e-7;
+        // check punti coincidenti
+        if(Math.pow(x1-x0,2)+Math.pow(y1-y0,2)<eps) return;
+        // calcolo le distanze quadrate dal centro
+        let d0 = x0*x0 + y0*y0;
+        let d1 = x1*x1 + y1*y1;
+        
+        // check punti allineati con il centro
+        let q = x0*y1-y0*x1;
+        if(Math.abs(q) < eps) {
+            // punti allineati con il centro
+            let p = d1>d0 ? p1 : p0;
+            let x = -p[1], y = p[0];
+            let r = Math.sqrt(x*x+y*y);
+            this.setParameters(x/r,y/r,0.0);
+        } else {
+            // punti non allineati
+            let p = invertPoint(d1>d0 ? p1 : p0);
+            let circle = getCircle(p0,p1,p);
+            this.setParameters(circle[0],circle[1],1.0);
+        }
+        
+        
+    }
+
+    getPoint(t, w = 0.0) {
+        let x,y,wx,wy;
+        let tt = -1.0 + 2.0 * Math.max(0.0, Math.min(1.0, t));
+        if(this.w == 0.0) {
+            x = tt * this.csPhi;
+            y = tt * this.snPhi;
+            wx = -this.snPhi;
+            wy = this.csPhi;
+        } else {
+            let angle = this.theta * (-1 + 2.0*t);
+            let cs = Math.cos(angle), sn = Math.sin(angle);
+            wx = this.e0[0] * cs + this.e1[0] * sn;
+            wy = this.e0[1] * cs + this.e1[1] * sn;
+            
+            x = this.cx + wx * this.r;
+            y = this.cy + wy * this.r;            
+        }
+        let ww = w * getHThickness(x,y);
+        return [x + wx*ww, y + wy*ww];
+    }
+}
+
+
+
+class HSegment {
+    constructor(p0, p1) {
+        this.setEnds(p0,p1);
+    }
+
+    setEnds(p0, p1) {
+        this.p0 = p0;
+        this.p1 = p1;
+
+        const [x0,y0] = p0;
+        const [x1,y1] = p1;
+        const eps = 1.0e-7;
+        // check punti coincidenti
+        if(Math.pow(x1-x0,2)+Math.pow(y1-y0,2)<eps) 
+        {
+            let p = [(x0+x1)/2, (y0+y1)/2];
+            this._getPoint = (t, w) => p;
+            return;
+        }
+        // calcolo le distanze quadrate dal centro
+        let d0 = x0*x0 + y0*y0;
+        let d1 = x1*x1 + y1*y1;
+        
+        // check punti allineati con il centro
+        let q = x0*y1-y0*x1;
+        if(Math.abs(q) < eps) {
+            // punti allineati con il centro            
+            let p = d1>d0 ? p1 : p0;
+            let pp = Math.sqrt(p[0]*p[0] + p[1]*p[1]);
+            const cs = p[0]/pp;
+            const sn = p[0]/pp;
+            const r0 = getLength(p0);
+            const r1 = getLength(p1);
+            this._getPoint = (t, w) => {
+                let r = r0*(1-t) + r1*t;
+                let x = cs*r, y = sn*r;
+                let ww = w * getHThickness(x,y);
+                return [x + -sn*ww, y + cs*ww];
+            };
+        } else {
+            // punti non allineati
+            let p = invertPoint(d1>d0 ? p1 : p0);
+            let circle = getCircle(p0,p1,p);
+            const [cx,cy,r] = circle; 
+            const e0 = [(x0-cx)/r, (y0-cy)/r];
+            let tmp = [-e0[1],e0[0]];
+            const e1 = tmp[0] * (x1-cx) +  tmp[1] * (y1-cy) >= 0 ? tmp : [-tmp[0],-tmp[1]];
+            let dx1 = x1 - cx, dy1 = y1 - cy;
+            let dd = Math.sqrt(dx1*dx1 + dy1*dy1);            
+            const theta = Math.acos((e0[0]*dx1 + e0[1]*dy1)/dd);
+            this._getPoint = (t, w) => {
+                let angle = theta * t;
+                let cs = Math.cos(angle);
+                let sn = Math.sin(angle);
+                let ux = cs * e0[0] + sn * e1[0];
+                let uy = cs * e0[1] + sn * e1[1];
+                let x = cx + ux*r, y = cy + uy*r;
+                let ww = w * getHThickness(x,y);
+                return [x + ux*ww, y + uy*ww];
+            };
+        }
+    }
+
+    getPoint(t, w = 0.0) {
+        return this._getPoint(t,w);
     }
 }

@@ -1,5 +1,7 @@
 
 
+
+
 class DiskViewer {
     constructor(options) {
         options = options || {};
@@ -23,6 +25,9 @@ class DiskViewer {
         this.onPointerMove = options.onPointerMove;
         this.onPointerDrag = options.onPointerDrag;
         
+        this.draggableDots = [];
+        this.currentDot = null;
+
         // call init
         initFn(gl, viewer);
 
@@ -44,6 +49,26 @@ class DiskViewer {
     }
 
 
+    createDraggableDot(x,y) {
+        let dot = new DraggableDot(this, x,y);
+        this.draggableDots.push(dot);
+        return dot;
+    }
+
+    getDotNearby(p) {
+        let found = null;
+        let minDist = 0;
+        this.draggableDots.forEach(dot => {
+            let dist = getDistance(p, dot.pos);
+            if(!found || dist < minDist) {
+                found = dot;
+                minDist = dist;
+            }
+        })
+        if(found && minDist < 0.5) return found;
+        else return null;
+    }
+
     createEntities() {
         let gl = this.gl;
         let entities = this.entities = {};
@@ -61,35 +86,50 @@ class DiskViewer {
         return [p[0],-p[1]]
     }
 
+    _onPointerDown(e) {
+        let p = this.pointerPosToWordPos(e);
+        this.oldp = p;
+        this.canvas.setPointerCapture(e.pointerId);
+        this.buttonDown = true;
+        let dot = this.getDotNearby(p);
+        if(dot) {
+            this.currentDot = dot;
+        } else if(this.onPointerDown) this.onPointerDown({x:p[0], y:p[1], e});
+    }
+    _onPointerUp(e) {
+        this.buttonDown = false;
+        if(this.currentDot) {
+            this.currentDot = null;
+        } else if(this.onPointerDown) 
+            this.onPointerUp(e);
+    }
+
+    _onPointerMove(e) {
+        let p = this.pointerPosToWordPos(e);
+        if(this.buttonDown) {
+            // drag
+            if(this.currentDot) this.currentDot.pos = p;
+            else {
+                let dx = p[0] - this.oldp[0];
+                let dy = p[1] - this.oldp[1];
+                this.oldp[0] = p[0];
+                this.oldp[1] = p[1];    
+                if(this.onPointerDrag) this.onPointerDrag({x:p[0], y:p[1], dx, dy, e});    
+            }
+        } else {
+            // move
+            if(this.onPointerMove) this.onPointerMove({x:p[0], y:p[1], e});
+        }
+    }
+    
     handlePointerEvents(canvas) {   
         const me = this;
         this.buttonDown = false;
-        canvas.onpointermove = e => {
-            let p = me.pointerPosToWordPos(e);
-            if(me.buttonDown) {
-                let dx = p[0] - me.oldp[0];
-                let dy = p[1] - me.oldp[1];
-                me.oldp[0] = p[0];
-                me.oldp[1] = p[1];                
-                if(me.onPointerDrag) me.onPointerDrag({x:p[0], y:p[1], dx, dy, e});                          
-            } else {
-                if(me.onPointerMove) me.onPointerMove({x:p[0], y:p[1], e});
-            }
-        };
-
-        canvas.onpointerdown = e => {
-            let p = me.pointerPosToWordPos(e);
-            me.oldp = p;
-            canvas.setPointerCapture(e.pointerId);
-            me.buttonDown = true;
-            if(me.onPointerDown) me.onPointerDown({x:p[0], y:p[1], e});
-        };
-
-        canvas.onpointerup = e => {
-            me.buttonDown = false;
-            if(me.onPointerUp) me.onPointerUp(e);
-        };
-    };
+        canvas.onpointerdown = e => me._onPointerDown(e);
+        canvas.onpointerup   = e => me._onPointerUp(e);
+        canvas.onpointermove = e => me._onPointerMove(e);
+    }
+       
 }
 
 
@@ -101,6 +141,14 @@ class DraggableDot {
         this.fillColor = [1,0,1,1];
         this.strokeColor = [0,0,0,1];        
     } 
+
+    get pos() {
+        return [this.x, this.y];
+    }
+    set pos(p) {
+        this.x = p[0];
+        this.y = p[1];        
+    }
 
     draw() {
         let dot = this.viewer.entities.dot;
@@ -118,3 +166,4 @@ class DraggableDot {
     }
 
 }
+

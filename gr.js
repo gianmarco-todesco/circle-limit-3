@@ -389,13 +389,68 @@ class Updatable extends Mesh {
 }
 
 
+class HLineMesh extends Mesh {
+    constructor(gl, m) {
+        super(gl, gl.TRIANGLE_STRIP, getSimpleMaterial(gl));
+        this.m = m;
+        this.hline = new HLine(0,1,0);
+        const attributes = this.attributes = { position: { data: new Array(m*2), numComponents: 2 } };    
+        this._computePts(this.hline);
+        this.createBufferInfo(attributes);
+    }  
+
+    _computePts(hline) {
+        const m = this.m;
+        const buffer = this.attributes.position.data;
+        for(let i=0;i<m;i++) {
+            let w = i==0 || i==m-1 ? 0.0 : (-1 + 2*(i%2))*0.01;
+            let p = hline.getPoint(i/(m-1),w);
+            buffer[i*2] = p[0];
+            buffer[i*2+1] = p[1];            
+        }
+    }
+    setByPoints(p0, p1) {
+        this.hline.setByPoints(p0,p1);
+        this._computePts(this.hline);
+        twgl.setAttribInfoBufferFromArray(this.gl, this.bufferInfo.attribs.position, this.attributes.position);
+    }
+}
+
+
+class HSegmentMesh extends Mesh {
+    constructor(gl, m, p0, p1) {
+        super(gl, gl.TRIANGLE_STRIP, getSimpleMaterial(gl));
+        this.m = m;
+        this.hSegment = new HSegment(p0,p1);
+        const attributes = this.attributes = { position: { data: new Array(m*2), numComponents: 2 } };    
+        this._computePts();
+        this.createBufferInfo(attributes);
+    }  
+
+    _computePts() {
+        const m = this.m;
+        const buffer = this.attributes.position.data;
+        for(let i=0;i<m;i++) {
+            let w = i==0 || i==m-1 ? 0.0 : (-1 + 2*(i%2))*0.01;
+            let p = this.hSegment.getPoint(i/(m-1),w);
+            buffer[i*2] = p[0];
+            buffer[i*2+1] = p[1];            
+        }
+    }
+    setEnds(p0, p1) {
+        this.hSegment.setEnds(p0,p1);
+        this._computePts();
+        twgl.setAttribInfoBufferFromArray(this.gl, this.bufferInfo.attribs.position, this.attributes.position);
+    }
+}
+
 
 
 //-----------------------------------------------------
 // Hyperbolic Shapes
 //-----------------------------------------------------
 
-class HLineMesh extends Mesh {
+class HLineMesh2 extends Mesh {
     constructor(gl,thickness, m) {
         super(gl, gl.TRIANGLE_STRIP, new HyperbolicSimpleMaterial(gl));
         const attributes = { position: { data: [], numComponents: 2 } };    
